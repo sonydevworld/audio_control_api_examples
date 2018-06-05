@@ -1,0 +1,199 @@
+= Play file on DLNA media server
+== Introduction
+This tutorial describes how to play a file on a Digital Living Network Alliance (DLNA)
+media renderer. We will use the following methods provided by the AVTransport service,
+and we will use cURL to send messages to the renderer.
+
+SetAVTransportURI:: Sets the file to play and provides the metadata for the file.
+Play:: Begins or resumes playback of the content.
+Stop:: Stops playback.
+Pause:: Pauses playback.
+
+This tutorial covers the following steps.
+
+1. Find your media renderer.
+2. Set up AVTransport configuration files for cURL.
+3. Give the file information to the renderer.
+4. Play the file on the renderer.
+
+=== Before you begin
+Before you begin, you will need to do the following.
+
+* Install cURL in your development environment.
+This tutorial uses cURL to send SOAP messages to the media renderer.
+* Set up a media server and media renderer on your network.
+One quick way to do this is to add music files to a USB memory stick and plug
+it in to a Sony home audio or personal audio device.
+The device will perform both functions.
+* Locate a file to play on the media server, and obtain the file's metadata.
+See the ContentDirectory tutorial for information on how to do this.
+
+=== Source path
+DLNA is primarily designed to play files from the local network. On some devices,
+the device may not correctly resolve the hostname in a URI to a IP address.
+So, you should always use an IP address and not a hostname.
+
+NOTE: On occasion, the device may not always send an error message when it
+cannot properly run a command, and in some cases, a problem in a previous command
+can result in later commands failing.
+
+== Discovery
+To find your media renderer, use the UPnP SSDP M-SEARCH method,
+with a search target of `urn:schemas-upnp-org:service:AVTransport:1`.
+The response should contain a list of all the media renderers available for use.
+Identify the media renderer to use, and record the IP address and port number
+from media renderer's LOCATION field.
+
+Next, use the full path from the LOCATION field to download the description file
+for the media renderer. Locate the AVTransport service; it will have a serviceType
+element with a value of `urn:schemas-upnp-org:service:AVTransport:1`.
+Record the value of the associated controlURL element.
+
+You will use the following transport URL to access the AVTransport service,
+`\http://{IP}:{PORT}{controlURL}`, where {IP} is the IP address, {PORT} is the port number,
+and {controlURL} is the controlURL for the AVTransport service on your chosen media renderer.
+The result should be something like `\http://192.168.1.119:52323/upnp/control/AVTransport`.
+
+== cURL config
+To simplify the use of cURL commands, create the following configuration files
+with the following contents, One for each of the AVTransport methods we will use.
+In each of these files, use your transport URL for the url value in the file.
+
+.SetAVTransportURI.conf
+----
+include::sample/SetAVTransportURI.conf[]
+----
+
+.Play.conf
+----
+include::sample/Play.conf[]
+----
+
+.Stop.conf
+----
+include::sample/Stop.conf[]
+----
+
+.Pause.conf
+----
+include::sample/Pause.conf[]
+----
+
+You can include a configuration file in a cURL command using the -K argument.
+
+== Example using cURL to play a file
+=== Set content to play
+Before it can play a file, you need to inform the media renderer which file to
+play and provide the file metadata. For information on ho to do this,
+see the ContentDirectory tutorial.
+
+In this example the following is the URI for the music file to play.
+----
+http://192.168.1.119:60151/I_01_05_2_-1_00_00_0_35_0_0
+----
+And, the following is the metadata for the music file. This is the escaped XML
+from the ContentDirectory tutorial. This includes information about the file we want to play.
+----
+&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot;
+xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;
+xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;
+xmlns:dlna=&quot;urn:schemas-dlna-org:metadata-1-0/&quot;
+xmlns:arib=&quot;urn:schemas-arib-or-jp:elements-1-0/&quot;
+xmlns:av=&quot;urn:schemas-sony-com:av&quot;&gt;
+&lt;item id=&quot;I_01_05_2_-1_00_00_0_35_0_0&quot; restricted=&quot;1&quot; parentID=&quot;35&quot;&gt;&lt;dc:title&gt;01 - Overture.mp3&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;
+----
+To make the metadata easier to read, you can unescape the string.
+[source,xml]
+----
+<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/"
+xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"
+xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"
+xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/"
+xmlns:arib="urn:schemas-arib-or-jp:elements-1-0/"
+xmlns:av="urn:schemas-sony-com:av">
+  <item id="I_01_05_2_-1_00_00_0_35_0_0" restricted="1" parentID="35">
+    <dc:title>01 - Overture.mp3</dc:title>
+    <upnp:class>object.item.audioItem.musicTrack</upnp:class>
+  </item>
+</DIDL-Lite>
+----
+File metadata can include additional information, such as the artist, track, and so on.
+Not all media renderers require metadata to play a file, but some do,
+and these will not play a file for which the metadata has not been set.
+Thus, it is best to always include it.
+
+To set the file to play and its metadata, use the SetAVTransportURI command.
+
+The command is sent as a SOAP message. Create the message in a
+SetAVTransportURI.data file. Set the CurrentURI parameter to the URI of the file to play,
+and set the CurrentURIMetaData parameter to the escaped file metadata.
+You will use cURL to send the message.
+
+.SetAVTransportURI.data
+[source,xml]
+----
+include::sample/SetAVTransportURI.data[]
+----
+
+To run this command, enter the following in your terminal or command prompt.
+
+----
+curl -K SetAVTransportURI.conf --data-binary @./SetAVTransportURI.data
+----
+
+On success, the response should resemble the following.
+[source,xml]
+----
+<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:SetAVTransportURIResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"></u:SetAVTransportURIResponse></s:Body></s:Envelope>
+----
+=== Controlling the music
+==== Play/Resume
+To start playing the music, use the Play command.
+Create a new SOAP message file named Play.data.
+
+.Play.data
+[source,xml]
+----
+include::sample/Play.data[]
+----
+
+Use cURL to run the command.
+
+----
+curl -K Play.conf --data-binary @./Play.data
+----
+
+==== Pause
+To pause the music, use the Pause command.
+This command is similar to the Play command.
+You can resume playback by calling the Play command again.
+Create a new SOAP message file named Pause.data.
+
+.Pause.data
+[source,xml]
+----
+include::sample/Pause.data[]
+----
+
+Use cURL to run the command.
+
+----
+curl -K Pause.conf --data-binary @./Pause.data
+----
+
+==== Stop
+To stop playing the music, use the Stop command.
+This command is also similar to the Play command.
+Create a new SOAP message file named Stop.data.
+
+.Stop.data
+[source,xml]
+----
+include::sample/Stop.data[]
+----
+
+Use cURL to run the command.
+
+----
+curl -K Stop.conf --data-binary @./Stop.data
+----

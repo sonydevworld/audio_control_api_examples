@@ -1,0 +1,63 @@
+= WebSocket example
+
+== Step 1: Requirements
+
+To follow this example, you must have Node.js installed. For more information and instructions, see https://nodejs.org/en/ and https://en.wikipedia.org/wiki/Node.js.
+We will also use the websocket Node.js library, which can be installed with npm.
+
+== Step 2: Setup
+
+. Create a new folder, open a terminal, and go to the newly created directory.
++
+----
+$> mkdir websocket_example
+$> cd websocket_example
+----
+
+. In the newly created directory initialize Node.js and accept defaults.
++
+----
+$> npm init --yes
+----
+
+. Install the websocket library.
++
+----
+$> npm install websocket
+----
+
+== Step 3: Get playing content info notifications
+
+. Create a playing_content_info.js file, and include the following code.
++
+--
+NOTE: you will have to change the IP address and port number in the last line.
+To find the {ipaddress} and {port} number see `X_X_ScalarWebAPI_BaseURL` in <<How does the API perform the device discovery process?>>,
+for example, for Home Audio (Receivers and Sound Bars) products the port is usually `10000` and for Personal Audio (Wireless Speakers) products, `54480`.
+The {ipaddress} is the IP address of the audio product.
+To get the playing content info notifications, you must enable the `notifyPlayingContentInfo` notification via the `switchNotifications` method.
+
+.playing_content_info.js
+[source, javascript]
+----
+include::src/playing_content_info.js[]
+----
+--
+
+. Enter `node ./playing_content_info.js` in the terminal or command prompt to run the code.
++
+----
+$> node ./playing_content_info.js
+----
+
+. The output should be similar to the following.
++
+----
+WebSocket Client Connected
+Received: '{"id":2,"result":[{"disabled":[{"name":"notifyAvailablePlaybackFunction","version":"1.0"},{"name":"notifyExternalTerminalStatus","version":"1.0"}],"enabled":[{"name":"notifyPlayingContentInfo","version":"1.0"}]}]}'
+Received: '{"method":"notifyPlayingContentInfo","params":[{"contentKind":"input","output":"extOutput:zone?zone=1","source":"extInput:bd-dvd","uri":"extInput:bd-dvd"}],"version":"1.0"}'
+Received: '{"method":"notifyPlayingContentInfo","params":[{"contentKind":"input","output":"extOutput:zone?zone=1","source":"extInput:sat-catv","uri":"extInput:sat-catv"}],"version":"1.0"}'
+Received: '{"method":"notifyPlayingContentInfo","params":[{"contentKind":"input","output":"extOutput:zone?zone=2","source":"extInput:video?port=1","uri":"extInput:video?port=1"}],"version":"1.0"}'
+----
+
+NOTE: A new *Received* message should be posted in the terminal every time the input source is changed.
